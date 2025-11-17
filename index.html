@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Be Shellfish</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="startScreen">
+    <h1>Choose Your Crab!</h1>
+    <h2>Which one speaks to you?</h2>
+    <div class="crab-selection">
+      <div class="crab-option" data-crab="crab1.png">
+        <img src="crab1.png" alt="Crab 1" onerror="this.style.display='none'">
+        <span class="crab-label">Sally</span>
+      </div>
+      <div class="crab-option" data-crab="crab2.png">
+        <img src="crab2.png" alt="Crab 2" onerror="this.style.display='none'">
+        <span class="crab-label">Bert</span>
+      </div>
+      <div class="crab-option" data-crab="crab3.png">
+        <img src="crab3.png" alt="Crab 3" onerror="this.style.display='none'">
+        <span class="crab-label">Ricky</span>
+      </div>
+      <div class="crab-option" data-crab="crab4.png">
+        <img src="crab4.png" alt="Crab 4" onerror="this.style.display='none'">
+        <span class="crab-label">Carolina</span>
+      </div>
+    </div>
+    <button id="startButton" disabled>START</button>
+  </div>
+  <canvas id="game" width="480" height="720"></canvas>
+  <script src="game.js"></script>
+</body>
+</html>

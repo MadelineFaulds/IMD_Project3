@@ -1,0 +1,426 @@
+// Canvas setup
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+// Start screen elements
+const startScreen = document.getElementById("startScreen");
+const startButton = document.getElementById("startButton");
+const crabOptions = document.querySelectorAll(".crab-option");
+let selectedCrabSrc = null;
+let gameStarted = false;
+
+// Game dimensions
+const W = canvas.width;
+const H = canvas.height;
+
+// Water area
+const water_W = W * 0.6;
+const water_X = (W - water_W) / 2;
+
+// Crab object
+const crab = {
+  x: 0,
+  y: 0,
+  w: 38,
+  h: 64
+};
+
+// Input handling
+const keys = {};
+window.addEventListener("keydown", (e) => {
+  keys[e.key] = true;
+  if ((e.key === "r" || e.key === "R") && dead) restart();
+  if (e.key === "h" || e.key === "H") {
+    gameStarted = false;
+    startScreen.classList.remove("hidden");
+    restart();
+  }
+});
+window.addEventListener("keyup", (e) => { 
+  keys[e.key] = false; 
+});
+
+// Game state
+let speed = 220;
+let offset = 0;
+let bubbleOffset = 0;
+const steerSpeed = 260;
+let foodItems = [];
+let trashItems = [];
+let dead = false;
+let score = 0;
+const MAX_FOOD = 4;
+const MAX_TRASH = 4;
+let glowTimer = 0;
+const GLOW_DURATION = 0.3;
+let glowColor = "gold";
+
+// Food types with different point values
+const FOOD_TYPES = [
+  { name: "food1", img: "food1.png", points: 1, weight: 50, w: 40, h: 35 },
+  { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 },
+  { name: "food3", img: "food3.png", points: 5, weight: 15, w: 100, h: 100 },
+  { name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
+];
+
+// Load all food images
+const foodImages = {};
+FOOD_TYPES.forEach(type => {
+  const img = new Image();
+  img.src = type.img;
+  foodImages[type.name] = img;
+});
+
+// Trash types with different point penalties
+const TRASH_TYPES = [
+  { name: "trash1", img: "trash1.png", points: -1, weight: 50, w: 30, h: 40 },
+  { name: "trash2", img: "trash2.png", points: -2, weight: 30, w: 70, h: 70 },
+  { name: "trash3", img: "trash3.png", points: -3, weight: 15, w: 50, h: 60 },
+  { name: "trash4", img: "trash4.png", points: -5, weight: 5, w: 200, h: 200 }
+];
+
+// Load all trash images
+const trashImages = {};
+TRASH_TYPES.forEach(type => {
+  const img = new Image();
+  img.src = type.img;
+  trashImages[type.name] = img;
+});
+
+// Utility functions
+function rand(min, max) { 
+  return Math.random() * (max - min) + min; 
+}
+
+function clamp(v, a, b) { 
+  return Math.max(a, Math.min(b, v)); 
+}
+
+function overlap(a, b) {
+  // Reduce crab hitbox by 20% on all sides for more precise collision
+  const crabPadding = 0.2;
+  const crabX = a.x + (a.w * crabPadding);
+  const crabY = a.y + (a.h * crabPadding);
+  const crabW = a.w * (1 - crabPadding * 2);
+  const crabH = a.h * (1 - crabPadding * 2);
+  
+  return crabX < b.x + b.w &&
+         crabX + crabW > b.x &&
+         crabY < b.y + b.h &&
+         crabY + crabH > b.y;
+}
+
+function weightedRandomSelect(types) {
+  const totalWeight = types.reduce((sum, type) => sum + type.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  for (let type of types) {
+    random -= type.weight;
+    if (random <= 0) {
+      return type;
+    }
+  }
+  return types[types.length - 1];
+}
+
+// Spawn food
+function spawnFood() {
+  const foodType = weightedRandomSelect(FOOD_TYPES);
+  const xMin = water_X;
+  const xMax = water_X + water_W - foodType.w;
+  const newFood = {
+    x: rand(xMin, xMax),
+    y: -80,
+    w: foodType.w,
+    h: foodType.h,
+    vy: rand(140, 220) + score * 6,
+    type: foodType,
+    points: foodType.points
+  };
+  foodItems.push(newFood);
+}
+
+// Spawn trash
+function spawnTrash() {
+  const trashType = weightedRandomSelect(TRASH_TYPES);
+  const xMin = water_X;
+  const xMax = water_X + water_W - trashType.w;
+  const newTrash = {
+    x: rand(xMin, xMax),
+    y: -80,
+    w: trashType.w,
+    h: trashType.h,
+    vy: rand(140, 220) + score * 6,
+    type: trashType,
+    points: trashType.points
+  };
+  trashItems.push(newTrash);
+}
+
+// Crab sprite
+const CRAB_SCALE_CAP = 1.7;
+const crabImg = new Image();
+
+function loadCrabSprite(src) {
+  crabImg.src = src;
+}
+
+crabImg.onload = () => {
+  const maxW = water_W * 0.8;
+  const maxH = H * 0.35;
+  const fitW = maxW / crabImg.width;
+  const fitH = maxH / crabImg.height;
+  const scale = Math.min(CRAB_SCALE_CAP, fitW, fitH) * 0.85;
+
+  crab.w = Math.max(10, Math.floor(crabImg.width * scale));
+  crab.h = Math.max(10, Math.floor(crabImg.height * scale));
+  crab.x = W / 2 - crab.w / 2;
+  crab.y = H - crab.h - 20;
+};
+
+crabImg.addEventListener('error', () => console.error('Failed to load crab image'));
+
+// Bubble sprite
+const bubbleImg = new Image();
+bubbleImg.src = "bubble.png";
+
+// Draw function
+function draw() {
+  // Blue water background (full screen)
+  ctx.fillStyle = "lightblue";
+  ctx.fillRect(0, 0, W, H);
+
+  // Bubbles
+  const leftX = 50;
+  const rightX = W - 50;
+  const period = 120;
+  for (let y = 0; y < H + 40; y += period) {
+    const yy = H - ((y + bubbleOffset) % (H + 40));
+    const yyRight = H - ((y + bubbleOffset + period / 2) % (H + 40));
+    
+    // Vary bubble sizes based on position
+    const bubbleSizeLeft = 20 + Math.sin(y * 0.1 + bubbleOffset * 0.05) * 8;
+    const bubbleSizeRight = 18 + Math.cos(y * 0.15 + bubbleOffset * 0.03) * 7;
+    
+    if (bubbleImg.complete && bubbleImg.naturalWidth > 0) {
+      ctx.drawImage(bubbleImg, leftX - bubbleSizeLeft / 2, yy - bubbleSizeLeft / 2, bubbleSizeLeft, bubbleSizeLeft);
+      ctx.drawImage(bubbleImg, rightX - bubbleSizeRight / 2, yyRight - bubbleSizeRight / 2, bubbleSizeRight, bubbleSizeRight);
+    } else {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.beginPath();
+      ctx.arc(leftX, yy, bubbleSizeLeft / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rightX, yyRight, bubbleSizeRight / 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Draw trash items
+  trashItems.forEach(trash => {
+    const trashImg = trashImages[trash.type.name];
+    if (trashImg && trashImg.complete && trashImg.naturalWidth > 0) {
+      ctx.drawImage(trashImg, 0, 0, trashImg.width, trashImg.height, trash.x, trash.y, trash.w, trash.h);
+    } else {
+      ctx.fillStyle = trash.type.color;
+      ctx.fillRect(trash.x, trash.y, trash.w, trash.h);
+    }
+    
+    // Draw point penalty on trash
+    ctx.fillStyle = "#fff";
+    ctx.font = "lexend";
+    ctx.textAlign = "center";
+    ctx.fillText(`${trash.points}`, trash.x + trash.w / 2, trash.y + trash.h / 2 + 6);
+  });
+
+  // Draw food items
+  foodItems.forEach(food => {
+    const foodImg = foodImages[food.type.name];
+    if (foodImg && foodImg.complete && foodImg.naturalWidth > 0) {
+      ctx.drawImage(foodImg, 0, 0, foodImg.width, foodImg.height, food.x, food.y, food.w, food.h);
+    } else {
+      ctx.fillStyle = food.type.color;
+      ctx.fillRect(food.x, food.y, food.w, food.h);
+    }
+    
+    // Draw point value on food
+    ctx.fillStyle = "#fff";
+    ctx.font = "bold 16px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(`+${food.points}`, food.x + food.w / 2, food.y + food.h / 2 + 6);
+  });
+
+  // Draw glow effect around crab if active
+  if (glowTimer > 0) {
+    const glowIntensity = glowTimer / GLOW_DURATION;
+    const glowRadius = Math.max(crab.w, crab.h) * 0.7;
+    const centerX = crab.x + crab.w / 2;
+    const centerY = crab.y + crab.h / 2;
+    
+    const glowRGB = glowColor === "gold" ? "255, 215, 0" : "255, 0, 0";
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
+    gradient.addColorStop(0, `rgba(${glowRGB}, ${0.6 * glowIntensity})`);
+    gradient.addColorStop(0.5, `rgba(${glowRGB}, ${0.3 * glowIntensity})`);
+    gradient.addColorStop(1, `rgba(${glowRGB}, 0)`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
+  }
+
+  // Draw crab
+  ctx.textAlign = "left";
+  if (crabImg.complete && crabImg.naturalWidth > 0) {
+    ctx.drawImage(crabImg, 0, 0, crabImg.width, crabImg.height, crab.x, crab.y, crab.w, crab.h);
+  } else {
+    ctx.fillStyle = "red";
+    ctx.fillRect(crab.x, crab.y, crab.w, crab.h);
+  }
+
+  // Score and instructions
+  ctx.fillStyle = "#fff";
+  ctx.font = "24px 'Lexend', sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`Score: ${score}`, W / 2, 35);
+  ctx.font = "12px 'Lexend', sans-serif";
+  ctx.fillText("It's okay to be shellfish, catch yourself some food, and avoid ocean pollution!", W / 2, 55);
+  ctx.font = "10px 'Lexend', sans-serif";
+  ctx.fillText("press H to go home!", W / 2, 70);
+  ctx.textAlign = "left";
+
+  // Game over message
+  if (dead) {
+    const msg = "You suck and you are dead! Press R to restart";
+    ctx.font = "20px system-ui, sans-serif";
+    const w = ctx.measureText(msg).width + 24;
+    const h = 56;
+    ctx.fillStyle = "rgba(0,0,0,.6)";
+    ctx.fillRect(W / 2 - w / 2, H * 0.35 - h / 2, w, h);
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(msg, W / 2, H * 0.35);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+}
+
+// Update function
+function update(dt) {
+  if (dead) return;
+
+  offset += speed * dt;
+  bubbleOffset += 120 * dt;
+  
+  // Update glow timer
+  if (glowTimer > 0) {
+    glowTimer -= dt;
+    if (glowTimer < 0) glowTimer = 0;
+  }
+
+  // Movement
+  const left = keys["ArrowLeft"];
+  const right = keys["ArrowRight"];
+  const dir = (right ? 1 : 0) - (left ? 1 : 0);
+  crab.x += dir * steerSpeed * dt;
+  crab.x = clamp(crab.x, 0, W - crab.w);
+
+  // Spawn food and trash
+  if (foodItems.length < MAX_FOOD && Math.random() < 0.01) {
+    spawnFood();
+  }
+  if (trashItems.length < MAX_TRASH && Math.random() < 0.01) {
+    spawnTrash();
+  }
+
+  // Update and check food items
+  for (let i = foodItems.length - 1; i >= 0; i--) {
+    const food = foodItems[i];
+    food.y += food.vy * dt;
+
+    // Check collision with crab
+    if (overlap(crab, food)) {
+      score += food.points;
+      speed += 10;
+      glowTimer = GLOW_DURATION;
+      glowColor = "gold";
+      foodItems.splice(i, 1);
+      continue;
+    }
+
+    // Remove if off screen
+    if (food.y > H + 40) {
+      foodItems.splice(i, 1);
+    }
+  }
+
+  // Update and check trash items
+  for (let i = trashItems.length - 1; i >= 0; i--) {
+    const trash = trashItems[i];
+    trash.y += trash.vy * dt;
+
+    // Check collision with crab (lose points)
+    if (overlap(crab, trash)) {
+      score += trash.points;
+      if (score < 0) score = 0;
+      glowTimer = GLOW_DURATION;
+      glowColor = "red";
+      trashItems.splice(i, 1);
+      continue;
+    }
+
+    // Remove if off screen
+    if (trash.y > H + 40) {
+      trashItems.splice(i, 1);
+    }
+  }
+}
+
+// Restart function
+function restart() {
+  dead = false;
+  score = 0;
+  speed = 220;
+  offset = 0;
+  bubbleOffset = 0;
+  crab.x = W / 2 - crab.w / 2;
+  crab.y = H - crab.h - 20;
+  foodItems = [];
+  trashItems = [];
+  glowTimer = 0;
+}
+
+// Game loop
+let last = performance.now();
+function loop(now) {
+  if (!gameStarted) return;
+  const dt = Math.min(0.033, (now - last) / 1000);
+  last = now;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Crab selection logic
+crabOptions.forEach(option => {
+  option.addEventListener('click', () => {
+    crabOptions.forEach(opt => opt.classList.remove('selected'));
+    option.classList.add('selected');
+    selectedCrabSrc = option.getAttribute('data-crab');
+    startButton.disabled = false;
+  });
+});
+
+// Start button logic
+startButton.addEventListener('click', () => {
+  if (selectedCrabSrc) {
+    startScreen.classList.add('hidden');
+    gameStarted = true;
+    loadCrabSprite(selectedCrabSrc);
+    last = performance.now();
+    requestAnimationFrame(loop);
+  }
+});
+
+// Initialize game loop (but don't start until button pressed)
+requestAnimationFrame(loop);
