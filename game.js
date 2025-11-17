@@ -3,6 +3,10 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
+// Set canvas to full screen
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
 // Start screen elements
 const startScreen = document.getElementById("startScreen");
 const startButton = document.getElementById("startButton");
@@ -13,6 +17,42 @@ let gameStarted = false;
 // Game dimensions
 const W = canvas.width;
 const H = canvas.height;
+
+// Resize handler
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  location.reload(); // Reload to reset game with new dimensions
+});
+
+// Mouse click handling for victory buttons
+canvas.addEventListener('click', (e) => {
+  if (!won) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  
+  // Button dimensions
+  const buttonWidth = 500;
+  const buttonHeight = 60;
+  const button1Y = H / 2 + 20;
+  const button2Y = H / 2 + 100;
+  const buttonX = W / 2 - buttonWidth / 2;
+  
+  // Check if clicked on button 1
+  if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+      mouseY >= button1Y && mouseY <= button1Y + buttonHeight) {
+    won = false; // Continue playing
+  }
+  // Check if clicked on button 2
+  else if (mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
+           mouseY >= button2Y && mouseY <= button2Y + buttonHeight) {
+    gameStarted = false;
+    startScreen.classList.remove("hidden");
+    restart();
+  }
+});
 
 // Water area
 const water_W = W * 0.6;
@@ -36,6 +76,18 @@ window.addEventListener("keydown", (e) => {
     startScreen.classList.remove("hidden");
     restart();
   }
+  // Victory options
+  if (won) {
+    if (e.key === "1") {
+      // Continue playing
+      won = false;
+    } else if (e.key === "2") {
+      // Go home to crab family
+      gameStarted = false;
+      startScreen.classList.remove("hidden");
+      restart();
+    }
+  }
 });
 window.addEventListener("keyup", (e) => { 
   keys[e.key] = false; 
@@ -49,12 +101,18 @@ const steerSpeed = 260;
 let foodItems = [];
 let trashItems = [];
 let dead = false;
+let won = false;
 let score = 0;
 const MAX_FOOD = 4;
 const MAX_TRASH = 4;
 let glowTimer = 0;
 const GLOW_DURATION = 0.3;
 let glowColor = "gold";
+let totalTrashConsumed = 0;
+let trash5Consumed = 0;
+let deathAnimationTimer = 0;
+const DEATH_ANIMATION_DURATION = 0.8;
+let deathRotation = 0;
 
 // Food types with different point values
 const FOOD_TYPES = [
@@ -271,7 +329,21 @@ function draw() {
   // Draw crab
   ctx.textAlign = "left";
   if (crabImg.complete && crabImg.naturalWidth > 0) {
+    ctx.save();
+    
+    // Apply death animation rotation
+    if (deathAnimationTimer > 0) {
+      // Center the rotation on the crab
+      const centerX = crab.x + crab.w / 2;
+      const centerY = crab.y + crab.h / 2;
+      ctx.translate(centerX, centerY);
+      ctx.rotate(deathRotation);
+      ctx.translate(-centerX, -centerY);
+    }
+    
     ctx.drawImage(crabImg, 0, 0, crabImg.width, crabImg.height, crab.x, crab.y, crab.w, crab.h);
+    
+    ctx.restore();
   } else {
     ctx.fillStyle = "red";
     ctx.fillRect(crab.x, crab.y, crab.w, crab.h);
@@ -288,18 +360,65 @@ function draw() {
   ctx.fillText("press H to go home!", W / 2, 70);
   ctx.textAlign = "left";
 
-  // Game over message
-  if (dead) {
-    const msg = "You suck and you are dead! Press R to restart";
-    ctx.font = "20px system-ui, sans-serif";
-    const w = ctx.measureText(msg).width + 24;
-    const h = 56;
-    ctx.fillStyle = "rgba(0,0,0,.6)";
-    ctx.fillRect(W / 2 - w / 2, H * 0.35 - h / 2, w, h);
+  // Game over overlay
+  if (dead && deathAnimationTimer <= 0) {
+    // Semi-transparent full screen overlay
+    ctx.fillStyle = "rgba(122, 18, 18, 0.7)";
+    ctx.fillRect(0, 0, W, H);
+    
+    // Death message
     ctx.fillStyle = "#fff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(msg, W / 2, H * 0.35);
+    ctx.font = "bold 36px 'Lexend', sans-serif";
+    ctx.fillText("You consumed too much ocean pollution!", W / 2, H / 2 - 30);
+    ctx.font = "24px 'Lexend', sans-serif";
+    ctx.fillText("Press R to Respawn.", W / 2, H / 2 + 30);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+  
+  // Victory overlay
+  if (won) {
+    // Semi-transparent full screen overlay
+    ctx.fillStyle = "rgba(0, 100, 150, 0.85)";
+    ctx.fillRect(0, 0, W, H);
+    
+    // Victory message
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold 42px 'Lexend', sans-serif";
+    ctx.fillText("Congratulations!", W / 2, H / 2 - 100);
+    ctx.font = "28px 'Lexend', sans-serif";
+    ctx.fillText("You have collected plenty of food.", W / 2, H / 2 - 40);
+    
+    // Button styling
+    const buttonWidth = 500;
+    const buttonHeight = 60;
+    const button1Y = H / 2 + 20;
+    const button2Y = H / 2 + 100;
+    const buttonX = W / 2 - buttonWidth / 2;
+    
+    // Button 1: Continue playing
+    ctx.fillStyle = "#4a9eff";
+    ctx.fillRect(buttonX, button1Y, buttonWidth, buttonHeight);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(buttonX, button1Y, buttonWidth, buttonHeight);
+    ctx.fillStyle = "#fff";
+    ctx.font = "22px 'Lexend', sans-serif";
+    ctx.fillText("Be Shellfish and collect more food", W / 2, button1Y + buttonHeight / 2);
+    
+    // Button 2: Go home
+    ctx.fillStyle = "#2a7acc";
+    ctx.fillRect(buttonX, button2Y, buttonWidth, buttonHeight);
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(buttonX, button2Y, buttonWidth, buttonHeight);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("Go rest with your Crab Family", W / 2, button2Y + buttonHeight / 2);
+    
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
   }
@@ -307,7 +426,14 @@ function draw() {
 
 // Update function
 function update(dt) {
-  if (dead) return;
+  // Update death animation
+  if (deathAnimationTimer > 0) {
+    deathAnimationTimer -= dt;
+    deathRotation += dt * 8; // Spin speed
+    return; // Don't update game during death animation
+  }
+  
+  if (dead || won) return;
 
   offset += speed * dt;
   bubbleOffset += 120 * dt;
@@ -338,13 +464,18 @@ function update(dt) {
     const food = foodItems[i];
     food.y += food.vy * dt;
 
-    // Check collision with crab
+    // Check collision with crab (gain points)
     if (overlap(crab, food)) {
       score += food.points;
       speed += 10;
       glowTimer = GLOW_DURATION;
       glowColor = "gold";
       foodItems.splice(i, 1);
+      
+      // Check victory condition
+      if (score >= 150 && !won) {
+        won = true;
+      }
       continue;
     }
 
@@ -365,6 +496,20 @@ function update(dt) {
       if (score < 0) score = 0;
       glowTimer = GLOW_DURATION;
       glowColor = "red";
+      
+      // Track trash consumption
+      totalTrashConsumed++;
+      if (trash.points === -5) {
+        trash5Consumed++;
+      }
+      
+      // Check death conditions
+      if (totalTrashConsumed >50 || trash5Consumed >= 13) {
+        dead = true;
+        deathAnimationTimer = DEATH_ANIMATION_DURATION;
+        deathRotation = 0;
+      }
+      
       trashItems.splice(i, 1);
       continue;
     }
@@ -379,6 +524,7 @@ function update(dt) {
 // Restart function
 function restart() {
   dead = false;
+  won = false;
   score = 0;
   speed = 220;
   offset = 0;
@@ -387,6 +533,10 @@ function restart() {
   crab.y = H - crab.h - 20;
   foodItems = [];
   trashItems = [];
+  totalTrashConsumed = 0;
+  trash5Consumed = 0;
+  deathAnimationTimer = 0;
+  deathRotation = 0;
   glowTimer = 0;
 }
 
