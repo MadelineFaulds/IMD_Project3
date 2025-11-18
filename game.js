@@ -109,6 +109,9 @@ let glowTimer = 0;
 const GLOW_DURATION = 0.3;
 let glowColor = "gold";
 let totalTrashConsumed = 0;
+let totalFoodConsumed = 0;
+let foodPoints = 0;
+let trashPoints = 0;
 let trash5Consumed = 0;
 let deathAnimationTimer = 0;
 const DEATH_ANIMATION_DURATION = 0.8;
@@ -234,7 +237,7 @@ crabImg.onload = () => {
   crab.w = Math.max(10, Math.floor(crabImg.width * scale));
   crab.h = Math.max(10, Math.floor(crabImg.height * scale));
   crab.x = W / 2 - crab.w / 2;
-  crab.y = H - crab.h - 20;
+  crab.y = H - crab.h - 40;
 };
 
 crabImg.addEventListener('error', () => console.error('Failed to load crab image'));
@@ -349,15 +352,34 @@ function draw() {
     ctx.fillRect(crab.x, crab.y, crab.w, crab.h);
   }
 
-  // Score and instructions
+  // Score and instructions at top
   ctx.fillStyle = "#fff";
   ctx.font = "24px 'Lexend', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(`Score: ${score}`, W / 2, 35);
-  ctx.font = "12px 'Lexend', sans-serif";
-  ctx.fillText("It's okay to be shellfish, catch yourself some food, and avoid ocean pollution!", W / 2, 55);
+  ctx.fillText(`Score: ${score}/150`, W / 2, 35);
+  
+  // Trash consumed bar (red)
+  const barWidth = 300;
+  const barHeight = 20;
+  const barX = W / 2 - barWidth / 2;
+  const barY = 45;
+  
+  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+  ctx.fillRect(barX, barY, barWidth, barHeight);
+  ctx.fillStyle = "#ef4444";
+  const trashProgress = Math.min(trashPoints / 50, 1) * barWidth;
+  ctx.fillRect(barX, barY, trashProgress, barHeight);
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(barX, barY, barWidth, barHeight);
+  ctx.fillStyle = "#fff";
   ctx.font = "10px 'Lexend', sans-serif";
-  ctx.fillText("press H to go home!", W / 2, 70);
+  ctx.fillText(`Trash Consumed: ${trashPoints}/50`, W / 2, barY + 14);
+  
+  ctx.font = "12px 'Lexend', sans-serif";
+  ctx.fillText("It's okay to be shellfish, catch yourself some food, and avoid ocean pollution!", W / 2, 80);
+  ctx.font = "10px 'Lexend', sans-serif";
+  ctx.fillText("press H to go home!", W / 2, 95);
   ctx.textAlign = "left";
 
   // Game over overlay
@@ -467,6 +489,8 @@ function update(dt) {
     // Check collision with crab (gain points)
     if (overlap(crab, food)) {
       score += food.points;
+      totalFoodConsumed++;
+      foodPoints += food.points;
       speed += 10;
       glowTimer = GLOW_DURATION;
       glowColor = "gold";
@@ -497,14 +521,15 @@ function update(dt) {
       glowTimer = GLOW_DURATION;
       glowColor = "red";
       
-      // Track trash consumption
+      // Track trash consumption and points
       totalTrashConsumed++;
+      trashPoints += Math.abs(trash.points);
       if (trash.points === -5) {
         trash5Consumed++;
       }
       
-      // Check death conditions
-      if (totalTrashConsumed >50 || trash5Consumed >= 13) {
+      // Check death condition - 50 trash points
+      if (trashPoints >= 50) {
         dead = true;
         deathAnimationTimer = DEATH_ANIMATION_DURATION;
         deathRotation = 0;
@@ -530,10 +555,13 @@ function restart() {
   offset = 0;
   bubbleOffset = 0;
   crab.x = W / 2 - crab.w / 2;
-  crab.y = H - crab.h - 20;
+  crab.y = H - crab.h - 40;
   foodItems = [];
   trashItems = [];
   totalTrashConsumed = 0;
+  totalFoodConsumed = 0;
+  foodPoints = 0;
+  trashPoints = 0;
   trash5Consumed = 0;
   deathAnimationTimer = 0;
   deathRotation = 0;
