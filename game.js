@@ -68,9 +68,7 @@ const crab = {
   h: 64
 };
 
-// ocean bottom
-const sand = new Image();
-sandImg.src = "sand.png";  
+
 
 // Input handling
 const keys = {};
@@ -103,7 +101,6 @@ window.addEventListener("keyup", (e) => {
 let level = 1;
 let speed = 220;
 let offset = 0;
-let bubbleOffset = 0;
 const steerSpeed = 260;
 let foodItems = [];
 let trashItems = [];
@@ -124,25 +121,39 @@ let deathAnimationTimer = 0;
 const DEATH_ANIMATION_DURATION = 0.8;
 let deathRotation = 0;
 
-// Food types with different point values
-const FOOD_TYPES = [
-  { name: "food1", img: "food1.png", points: 1, weight: 50, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 }
+// Food types with different point values for level one and level two...
+const FOOD_TYPES_L1 = [
+  { name: "food1", img: "food1.png", points: 1, weight: 100, w: 40, h: 35 },
+  //{ name: "food2", img: "food2.png", points: 2, weight30, w: 40, h: 55 }
   //{ name: "food3", img: "food3.png", points: 5, weight: 15, w: 100, h: 100 },
   //{ name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
 ];
 
 const FOOD_TYPES_L2 = [
-  //{ name: "food1", img: "food1.png", points: 1, weight: 50, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 },
-  { name: "food3", img: "food3.png", points: 5, weight: 25, w: 100, h: 100 },
-  { name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
+  { name: "food1", img: "food1.png", points: 2, weight: 50, w: 40, h: 35 },
+  { name: "food2", img: "food2.png", points: 4, weight: 50, w: 40, h: 55 }
+  //{ name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
+  //{ name: "food4", img: "food4.png", points: 10, weight: 25, w: 70, h: 40 }
+];
+
+const FOOD_TYPES_L3 = [
+  { name: "food1", img: "food1.png", points: 2, weight: 33, w: 40, h: 35 },
+  { name: "food2", img: "food2.png", points: 4, weight: 33, w: 40, h: 55 },
+  //{ name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
+  { name: "food4", img: "food4.png", points: 10, weight: 33, w: 70, h: 40 }
+];
+
+const FOOD_TYPES_L4 = [
+  { name: "food1", img: "food1.png", points: 2, weight: 25, w: 40, h: 35 },
+  { name: "food2", img: "food2.png", points: 4, weight: 25, w: 40, h: 55 },
+  { name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
+  { name: "food4", img: "food4.png", points: 10, weight: 25, w: 70, h: 40 }
 ];
 
 // Load all food images
 const foodImages = {};
 
-FOOD_TYPES.forEach(type => {
+FOOD_TYPES_L1.forEach(type => {
   const img = new Image();
   img.src = type.img;
   foodImages[type.name] = img;
@@ -153,6 +164,30 @@ FOOD_TYPES_L2.forEach(type => {
   img.src = type.img;
   foodImages[type.name] = img;
 });
+
+FOOD_TYPES_L3.forEach(type => {
+  const img = new Image();
+  img.src = type.img;
+  foodImages[type.name] = img;
+});
+
+FOOD_TYPES_L4.forEach(type => {
+  const img = new Image();
+  img.src = type.img;
+  foodImages[type.name] = img;
+});
+
+// ocean bottom
+const sand = new Image();
+sand.src = "sand.png";  
+
+// corral 
+const corral1 = new Image();
+corral1.src = "corral1.png"; 
+
+const corral2 = new Image();
+corral2.src = "corral2.png"; 
+
 
 
 // Trash types with different point penalties
@@ -209,14 +244,22 @@ function weightedRandomSelect(types) {
 
 // Spawn food
 function spawnFood() {
-  let pool;
 
+  //different foods for level one and two
+  let pool;
   if (level === 1){
-        pool = FOOD_TYPES;
+        pool = FOOD_TYPES_L1;
   }
-  else{ 
+  else if (level === 2){ 
         pool = FOOD_TYPES_L2;
   }
+  else if (level === 3){ 
+        pool = FOOD_TYPES_L3;
+  }
+  else{ 
+        pool = FOOD_TYPES_L4;
+  }
+
   const foodType = weightedRandomSelect(pool);
   const xMin = water_X;
   const xMax = water_X + water_W - foodType.w;
@@ -272,17 +315,13 @@ crabImg.onload = () => {
 
 crabImg.addEventListener('error', () => console.error('Failed to load crab image'));
 
-// Bubble sprite
-const bubbleImg = new Image();
-bubbleImg.src = "bubble.png";
 
 // Draw function
 function draw() {
-  // requirement - change backgroupd color - attemtp to change to dark blue at 151 pts...
 
-  // if statement for the two levels of the game....
+  // requirement - change backgroupd color - attemtp to change to dark blue at 51 pts...
   //  0 - 50 = level 1
-  //   51 -  = level 2
+  //   51+   = level 2
 
    if (level === 2) {
       ctx.fillStyle = "darkblue";
@@ -296,31 +335,55 @@ function draw() {
        ctx.fillRect(0, 0, W, H);
    }
 
-  // Bubbles
-  const leftX = 50;
-  const rightX = W - 50;
-  const period = 120;
-  for (let y = 0; y < H + 40; y += period) {
-    const yy = H - ((y + bubbleOffset) % (H + 40));
-    const yyRight = H - ((y + bubbleOffset + period / 2) % (H + 40));
-    
-    // Vary bubble sizes based on position
-    const bubbleSizeLeft = 20 + Math.sin(y * 0.1 + bubbleOffset * 0.05) * 8;
-    const bubbleSizeRight = 18 + Math.cos(y * 0.15 + bubbleOffset * 0.03) * 7;
-    
-  //   if (bubbleImg.complete && bubbleImg.naturalWidth > 0) {
-  //     ctx.drawImage(bubbleImg, leftX - bubbleSizeLeft / 2, yy - bubbleSizeLeft / 2, bubbleSizeLeft, bubbleSizeLeft);
-  //     ctx.drawImage(bubbleImg, rightX - bubbleSizeRight / 2, yyRight - bubbleSizeRight / 2, bubbleSizeRight, bubbleSizeRight);
-  //   } else {
-  //     ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-  //     ctx.beginPath();
-  //     ctx.arc(leftX, yy, bubbleSizeLeft / 2, 0, Math.PI * 2);
-  //     ctx.fill();
-  //     ctx.beginPath();
-  //     ctx.arc(rightX, yyRight, bubbleSizeRight / 2, 0, Math.PI * 2);
-  //     ctx.fill();
-  //   }
-   }
+  // ocean bottom = sand plus corral for level 2
+
+  // 5% of screen height
+  const sandHeight = H * 0.05; 
+  if (sand.complete && sand.naturalWidth > 0) {
+    ctx.drawImage(
+      sand,
+      0, 0, sand.width, sand.height, 
+      0, H - sandHeight,                   
+      W, sandHeight                        
+    );
+  }
+
+  // Draw corral for level 2....
+  if (level >= 3) {
+
+
+  //first corral on left -> need to remove white space    
+  const corral1Height = H * 0.2; 
+  const corral1Width = corral1Height * (corral1.width / corral1.height);
+
+  if (corral1.complete && corral1.naturalWidth > 0) {
+    ctx.drawImage(
+      corral1,
+      0, 0, corral1.width, corral1.height, 
+      W * 0.15,
+      H - sandHeight - corral1Height,                 
+      corral1Width,
+      corral1Height                  
+    );
+  }
+
+  // second corral on the right - need to remove white space
+   const corral2Height = H * 0.2; 
+   const corral2Width = corral2Height * (corral2.width / corral2.height);
+   const margin = 20;
+
+    if (corral2.complete && corral2.naturalWidth > 0) {
+    ctx.drawImage(
+      corral2,
+      0, 0, corral2.width, corral2.height, 
+       W - corral2Width - margin, 
+       H - corral2Height,              
+      corral2Width,
+      corral2Height                  
+    );
+  }
+}
+
 
   // Draw trash items
   trashItems.forEach(trash => {
@@ -355,23 +418,6 @@ function draw() {
     ctx.textAlign = "center";
     ctx.fillText(`+${food.points}`, food.x + food.w / 2, food.y + food.h / 2 + 6);
   });
-
-  // // Draw glow effect around crab if active
-  // if (glowTimer > 0) {
-  //   const glowIntensity = glowTimer / GLOW_DURATION;
-  //   const glowRadius = Math.max(crab.w, crab.h) * 0.7;
-  //   const centerX = crab.x + crab.w / 2;
-  //   const centerY = crab.y + crab.h / 2;
-    
-  //   const glowRGB = glowColor === "gold" ? "255, 215, 0" : "255, 0, 0";
-  //   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
-  //   gradient.addColorStop(0, `rgba(${glowRGB}, ${0.6 * glowIntensity})`);
-  //   gradient.addColorStop(0.5, `rgba(${glowRGB}, ${0.3 * glowIntensity})`);
-  //   gradient.addColorStop(1, `rgba(${glowRGB}, 0)`);
-    
-  //   ctx.fillStyle = gradient;
-  //   ctx.fillRect(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
-  // }
 
   // Draw crab
   ctx.textAlign = "left";
@@ -502,7 +548,6 @@ function update(dt) {
   if (dead || won) return;
 
   offset += speed * dt;
-  bubbleOffset += 120 * dt;
   
   // Update glow timer
   if (glowTimer > 0) {
@@ -510,17 +555,20 @@ function update(dt) {
     if (glowTimer < 0) glowTimer = 0;
   }
 
-  // Movement
+  // Movement - crab gets faster as score increases!!
   const left = keys["ArrowLeft"];
   const right = keys["ArrowRight"];
   const dir = (right ? 1 : 0) - (left ? 1 : 0);
-  crab.x += dir * steerSpeed * dt;
+  let currentSteerSpeed = steerSpeed + score * 3;
+  crab.x += dir * currentSteerSpeed * dt;
   crab.x = clamp(crab.x, 0, W - crab.w);
 
-  // Spawn food and trash
+  // Spawn food
   if (foodItems.length < MAX_FOOD && Math.random() < 0.01) {
     spawnFood();
   }
+
+  // spawn trash
   if (trashItems.length < MAX_TRASH && Math.random() < 0.01) {
     spawnTrash();
   }
@@ -588,10 +636,18 @@ function update(dt) {
       trashItems.splice(i, 1);
     }
   }
+
+  //set the game level according to score...
   if (score > 10 && level === 1) {
   level = 2;
-  console.log("LEVEL UP → Level 2 reached at score:", score);
-}
+  }
+  else if (score > 20 && level === 2) {
+  level = 3;
+  }
+  else if (score > 50 && level === 3) {
+  level = 4;
+  }
+
 }
 
 // Restart function
@@ -601,7 +657,6 @@ function restart() {
   score = 0;
   speed = 220;
   offset = 0;
-  bubbleOffset = 0;
   crab.x = W / 2 - crab.w / 2;
   crab.y = H - crab.h - 40;
   foodItems = [];
