@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Be Shellfish</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="startScreen">
+    <h1>Choose Your Crab!</h1>
+    <h2>Which one speaks to you?</h2>
+    <div class="crab-selection">
+      <div class="crab-option" data-crab="crab1.png">
+        <img src="crab1.png" alt="Crab 1" onerror="this.style.display='none'">
+        <span class="crab-label">Sally</span>
+      </div>
+      <div class="crab-option" data-crab="crab2.png">
+        <img src="crab2.png" alt="Crab 2" onerror="this.style.display='none'">
+        <span class="crab-label">Bert</span>
+      </div>
+      <div class="crab-option" data-crab="crab3.png">
+        <img src="crab3.png" alt="Crab 3" onerror="this.style.display='none'">
+        <span class="crab-label">Ricky</span>
+      </div>
+      <div class="crab-option" data-crab="crab4.png">
+        <img src="crab4.png" alt="Crab 4" onerror="this.style.display='none'">
+        <span class="crab-label">Carolina</span>
+      </div>
+    </div>
+    <button id="startButton" disabled>START</button>
+  </div>
+  
+  <section id="game-section">
+    <canvas id="game"></canvas>
+  </section>
+  
+  <section id="content-section" style="display: block !important; position: relative !important; z-index: 999999 !important;">
+    <div class="content-container">
+      <h1>About the Game</h1>
+      
+      <h2>OBJECTIVE</h2>
+      <p>Guide your crab through the ocean and catch as much food as possible while avoiding ocean pollution. Reach 50 points to descend into the deep sea where more valuable food awaits! But be careful - if you consume 50 points worth of trash, your crab will die from pollution poisoning!</p>
+      
+      <h2>GAMEPLAY DEMO</h2>
+      <div class="video-container">
+        <video controls width="100%">
+          <source src="gamerecording.mp4" type="video/mp4">
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      
+      <h2>SCREENSHOTS</h2>
+      <div class="screenshots-grid">
+        <div class="screenshot-item">
+          <img src="startpage.png" alt="Character Selection Screen">
+          <p class="screenshot-caption">Choose Your Crab</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="level1.png" alt="Level 1 Gameplay">
+          <p class="screenshot-caption">Level 1 - Shallow Waters</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="deepsea1.png" alt="Deep Sea Level">
+          <p class="screenshot-caption">Level 2 - Deep Sea</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="deepsea2.png" alt="Deep Sea Gameplay">
+          <p class="screenshot-caption">Deep Sea Gameplay</p>
+        </div>
+        <div class="screenshot-item">
+          <img src="dead.png" alt="Game Over Screen">
+          <p class="screenshot-caption">Game Over</p>
+        </div>
+      </div>
+      
+      <h2>INSTRUCTIONS</h2>
+      <p><strong>Controls:</strong> Use the Left and Right Arrow keys to move your crab horizontally.</p>
+      <p><strong>Gameplay:</strong></p>
+      <ul>
+        <li>Catch food items to gain points (different foods are worth different amounts)</li>
+        <li>Avoid trash items - they reduce your score and add to your pollution meter</li>
+        <li>Watch the red trash bar at the top - if it fills completely, you die!</li>
+        <li>At 50 points, you'll enter Level 2 (the deep sea) with new, more valuable food types</li>
+        <li>Your crab gets faster as you score more points</li>
+        <li>Press H at any time to return to the character selection screen</li>
+        <li>Press R to restart after dying</li>
+      </ul>
+      
+      <h2>CREDITS</h2>
+      <p><strong>Game Design & Development:</strong> Madeline Faulds</p>
+      <p><strong>Special Thanks:</strong> Thank you Dad, for your invaluable help and support!</p>
+    </div>
+  </section>
+  
+  <script src="game.js"></script>
+</body>
+</html>

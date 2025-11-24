@@ -5,7 +5,7 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
 
-// Set canvas to full screen
+// Set canvas to viewport dimensions (not full window to allow scrolling)
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -17,14 +17,22 @@ let selectedCrabSrc = null;
 let gameStarted = false;
 
 // Game dimensions
-const W = canvas.width;
-const H = canvas.height;
+let W = canvas.width;
+let H = canvas.height;
 
 // Resize handler
 window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
-  location.reload(); // Reload to reset game with new dimensions
+  // Update game dimensions
+  W = canvas.width;
+  H = canvas.height;
+  
+  // Reposition crab
+  if (crab) {
+    crab.x = Math.min(crab.x, W - crab.w);
+    crab.y = H - crab.h - 40;
+  }
 });
 
 // Mouse click handling for victory buttons
@@ -107,6 +115,8 @@ let trashItems = [];
 let dead = false;
 let won = false;
 let score = 0;
+let highScore = 0;
+let deepSeaMessageTimer = 0;
 const MAX_FOOD = 4;
 const MAX_TRASH = 4;
 let glowTimer = 0;
@@ -124,28 +134,14 @@ let deathRotation = 0;
 // Food types with different point values for level one and level two...
 const FOOD_TYPES_L1 = [
   { name: "food1", img: "food1.png", points: 1, weight: 100, w: 40, h: 35 },
-  //{ name: "food2", img: "food2.png", points: 2, weight30, w: 40, h: 55 }
+  { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 }
   //{ name: "food3", img: "food3.png", points: 5, weight: 15, w: 100, h: 100 },
   //{ name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
 ];
 
 const FOOD_TYPES_L2 = [
   { name: "food1", img: "food1.png", points: 2, weight: 50, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 4, weight: 50, w: 40, h: 55 }
-  //{ name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
-  //{ name: "food4", img: "food4.png", points: 10, weight: 25, w: 70, h: 40 }
-];
-
-const FOOD_TYPES_L3 = [
-  { name: "food1", img: "food1.png", points: 2, weight: 33, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 4, weight: 33, w: 40, h: 55 },
-  //{ name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
-  { name: "food4", img: "food4.png", points: 10, weight: 33, w: 70, h: 40 }
-];
-
-const FOOD_TYPES_L4 = [
-  { name: "food1", img: "food1.png", points: 2, weight: 25, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 4, weight: 25, w: 40, h: 55 },
+  { name: "food2", img: "food2.png", points: 4, weight: 50, w: 40, h: 55 },
   { name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
   { name: "food4", img: "food4.png", points: 10, weight: 25, w: 70, h: 40 }
 ];
@@ -165,28 +161,19 @@ FOOD_TYPES_L2.forEach(type => {
   foodImages[type.name] = img;
 });
 
-FOOD_TYPES_L3.forEach(type => {
-  const img = new Image();
-  img.src = type.img;
-  foodImages[type.name] = img;
-});
-
-FOOD_TYPES_L4.forEach(type => {
-  const img = new Image();
-  img.src = type.img;
-  foodImages[type.name] = img;
-});
-
 // ocean bottom
 const sand = new Image();
-sand.src = "sand.png";  
+sand.src = "lightsand.png";  
 
-// corral 
-const corral1 = new Image();
-corral1.src = "corral1.png"; 
+const darkSand = new Image();
+darkSand.src = "darksand.png";  
 
-const corral2 = new Image();
-corral2.src = "corral2.png"; 
+// coral 
+const lightCoral = new Image();
+lightCoral.src = "lightcoral.png"; 
+
+const darkCoral = new Image();
+darkCoral.src = "darkcoral.png"; 
 
 
 
@@ -250,14 +237,8 @@ function spawnFood() {
   if (level === 1){
         pool = FOOD_TYPES_L1;
   }
-  else if (level === 2){ 
+  else { 
         pool = FOOD_TYPES_L2;
-  }
-  else if (level === 3){ 
-        pool = FOOD_TYPES_L3;
-  }
-  else{ 
-        pool = FOOD_TYPES_L4;
   }
 
   const foodType = weightedRandomSelect(pool);
@@ -324,65 +305,54 @@ function draw() {
   //   51+   = level 2
 
    if (level === 2) {
-      ctx.fillStyle = "darkblue";
+      ctx.fillStyle = "#144577ff"; // Dark blue for level 2
       ctx.fillRect(0, 0, W, H);
-
    }
    else {
-
       // Blue water background (full screen)
        ctx.fillStyle = "lightblue";
        ctx.fillRect(0, 0, W, H);
    }
 
-  // ocean bottom = sand plus corral for level 2
+   if (deepSeaMessageTimer > 0) {
+    ctx.fillStyle = "#fff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "bold 36px 'Lexend', sans-serif";
+    ctx.fillText("You have entered the deep sea!", W / 2, H / 2 - 30);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+   }
 
-  // 5% of screen height
-  const sandHeight = H * 0.05; 
-  if (sand.complete && sand.naturalWidth > 0) {
+  // ocean bottom - use dark sand for level 2, light sand for level 1
+  const sandHeight = H * 0.6; 
+  const currentSand = (level === 2) ? darkSand : sand;
+  if (currentSand.complete && currentSand.naturalWidth > 0) {
     ctx.drawImage(
-      sand,
-      0, 0, sand.width, sand.height, 
+      currentSand,
+      0, 0, currentSand.width, currentSand.height, 
       0, H - sandHeight,                   
       W, sandHeight                        
     );
   }
 
-  // Draw corral for level 2....
-  if (level >= 3) {
+  // Draw coral on left side - lightcoral.png for level 1, darkcoral.png for level 2
+  const currentCoral = (level === 2) ? darkCoral : lightCoral;
 
+  // Coral on left side, positioned lower on the sand
+  const coralHeight = H * 0.2; 
+  const coralWidth = coralHeight * (currentCoral.width / currentCoral.height);
 
-  //first corral on left -> need to remove white space    
-  const corral1Height = H * 0.2; 
-  const corral1Width = corral1Height * (corral1.width / corral1.height);
-
-  if (corral1.complete && corral1.naturalWidth > 0) {
+  if (currentCoral.complete && currentCoral.naturalWidth > 0) {
     ctx.drawImage(
-      corral1,
-      0, 0, corral1.width, corral1.height, 
-      W * 0.15,
-      H - sandHeight - corral1Height,                 
-      corral1Width,
-      corral1Height                  
+      currentCoral,
+      0, 0, currentCoral.width, currentCoral.height, 
+      W * 0.05,
+      H - sandHeight + (sandHeight * 0.6),                 
+      coralWidth,
+      coralHeight                  
     );
   }
-
-  // second corral on the right - need to remove white space
-   const corral2Height = H * 0.2; 
-   const corral2Width = corral2Height * (corral2.width / corral2.height);
-   const margin = 20;
-
-    if (corral2.complete && corral2.naturalWidth > 0) {
-    ctx.drawImage(
-      corral2,
-      0, 0, corral2.width, corral2.height, 
-       W - corral2Width - margin, 
-       H - corral2Height,              
-      corral2Width,
-      corral2Height                  
-    );
-  }
-}
 
 
   // Draw trash items
@@ -419,6 +389,23 @@ function draw() {
     ctx.fillText(`+${food.points}`, food.x + food.w / 2, food.y + food.h / 2 + 6);
   });
 
+  // Draw glow effect around crab
+  if (glowTimer > 0) {
+    const glowIntensity = glowTimer / GLOW_DURATION;
+    const glowRadius = Math.max(crab.w, crab.h) * 0.7;
+    const centerX = crab.x + crab.w / 2;
+    const centerY = crab.y + crab.h / 2;
+    
+    const glowRGB = glowColor === "gold" ? "255, 215, 0" : "255, 0, 0";
+    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
+    gradient.addColorStop(0, `rgba(${glowRGB}, ${0.6 * glowIntensity})`);
+    gradient.addColorStop(0.5, `rgba(${glowRGB}, ${0.3 * glowIntensity})`);
+    gradient.addColorStop(1, `rgba(${glowRGB}, 0)`);
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
+  }
+
   // Draw crab
   ctx.textAlign = "left";
   if (crabImg.complete && crabImg.naturalWidth > 0) {
@@ -446,7 +433,7 @@ function draw() {
   ctx.fillStyle = "#fff";
   ctx.font = "24px 'Lexend', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(`Score: ${score}/150`, W / 2, 35);
+  ctx.fillText(`Score: ${score}`, W / 2, 35);
   
   // Trash consumed bar (red)
   const barWidth = 300;
@@ -478,59 +465,19 @@ function draw() {
     ctx.fillStyle = "rgba(122, 18, 18, 0.7)";
     ctx.fillRect(0, 0, W, H);
     
-    // Death message
+    // High score in top right corner
     ctx.fillStyle = "#fff";
+    ctx.textAlign = "right";
+    ctx.font = "20px 'Lexend', sans-serif";
+    ctx.fillText(`High Score: ${highScore}`, W - 20, 35);
+    
+    // Death message
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "bold 36px 'Lexend', sans-serif";
     ctx.fillText("You consumed too much ocean pollution!", W / 2, H / 2 - 30);
     ctx.font = "24px 'Lexend', sans-serif";
     ctx.fillText("Press R to Respawn.", W / 2, H / 2 + 30);
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-  }
-  
-  // Victory overlay
-  if (won) {
-    // Semi-transparent full screen overlay
-    ctx.fillStyle = "rgba(0, 100, 150, 0.85)";
-    ctx.fillRect(0, 0, W, H);
-    
-    // Victory message
-    ctx.fillStyle = "#fff";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "bold 42px 'Lexend', sans-serif";
-    ctx.fillText("Congratulations!", W / 2, H / 2 - 100);
-    ctx.font = "28px 'Lexend', sans-serif";
-    ctx.fillText("You have collected plenty of food.", W / 2, H / 2 - 40);
-    
-    // Button styling
-    const buttonWidth = 500;
-    const buttonHeight = 60;
-    const button1Y = H / 2 + 20;
-    const button2Y = H / 2 + 100;
-    const buttonX = W / 2 - buttonWidth / 2;
-    
-    // Button 1: Continue playing
-    ctx.fillStyle = "#4a9eff";
-    ctx.fillRect(buttonX, button1Y, buttonWidth, buttonHeight);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(buttonX, button1Y, buttonWidth, buttonHeight);
-    ctx.fillStyle = "#fff";
-    ctx.font = "22px 'Lexend', sans-serif";
-    ctx.fillText("Be Shellfish and collect more food", W / 2, button1Y + buttonHeight / 2);
-    
-    // Button 2: Go home
-    ctx.fillStyle = "#2a7acc";
-    ctx.fillRect(buttonX, button2Y, buttonWidth, buttonHeight);
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 3;
-    ctx.strokeRect(buttonX, button2Y, buttonWidth, buttonHeight);
-    ctx.fillStyle = "#fff";
-    ctx.fillText("Go rest with your Crab Family", W / 2, button2Y + buttonHeight / 2);
-    
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
   }
@@ -545,7 +492,7 @@ function update(dt) {
     return; // Don't update game during death animation
   }
   
-  if (dead || won) return;
+  if (dead) return;
 
   offset += speed * dt;
   
@@ -553,6 +500,12 @@ function update(dt) {
   if (glowTimer > 0) {
     glowTimer -= dt;
     if (glowTimer < 0) glowTimer = 0;
+  }
+  
+  // Update deep sea message timer
+  if (deepSeaMessageTimer > 0) {
+    deepSeaMessageTimer -= dt;
+    if (deepSeaMessageTimer < 0) deepSeaMessageTimer = 0;
   }
 
   // Movement - crab gets faster as score increases!!
@@ -581,17 +534,13 @@ function update(dt) {
     // Check collision with crab (gain points)
     if (overlap(crab, food)) {
       score += food.points;
+      if (score > highScore) highScore = score;
       totalFoodConsumed++;
       foodPoints += food.points;
       speed += 10;
       glowTimer = GLOW_DURATION;
       glowColor = "gold";
       foodItems.splice(i, 1);
-      
-      // Check victory condition
-      if (score >= 150 && !won) {
-        won = true;
-      }
       continue;
     }
 
@@ -638,15 +587,10 @@ function update(dt) {
   }
 
   //set the game level according to score...
-  if (score > 10 && level === 1) {
+  if (score >= 50 && level === 1) {
   level = 2;
-  }
-  else if (score > 20 && level === 2) {
-  level = 3;
-  }
-  else if (score > 50 && level === 3) {
-  level = 4;
-  }
+  deepSeaMessageTimer = 3; // Show message for 3 seconds
+}
 
 }
 
@@ -654,6 +598,7 @@ function update(dt) {
 function restart() {
   dead = false;
   won = false;
+  level = 1;
   score = 0;
   speed = 220;
   offset = 0;
@@ -669,6 +614,7 @@ function restart() {
   deathAnimationTimer = 0;
   deathRotation = 0;
   glowTimer = 0;
+  deepSeaMessageTimer = 0;
 }
 
 // Game loop
