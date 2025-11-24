@@ -1,4 +1,5 @@
 // Testing github ...
+
 // Canvas setup
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
@@ -67,6 +68,10 @@ const crab = {
   h: 64
 };
 
+// ocean bottom
+const sand = new Image();
+sandImg.src = "sand.png";  
+
 // Input handling
 const keys = {};
 window.addEventListener("keydown", (e) => {
@@ -95,6 +100,7 @@ window.addEventListener("keyup", (e) => {
 });
 
 // Game state
+let level = 1;
 let speed = 220;
 let offset = 0;
 let bubbleOffset = 0;
@@ -121,18 +127,33 @@ let deathRotation = 0;
 // Food types with different point values
 const FOOD_TYPES = [
   { name: "food1", img: "food1.png", points: 1, weight: 50, w: 40, h: 35 },
+  { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 }
+  //{ name: "food3", img: "food3.png", points: 5, weight: 15, w: 100, h: 100 },
+  //{ name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
+];
+
+const FOOD_TYPES_L2 = [
+  //{ name: "food1", img: "food1.png", points: 1, weight: 50, w: 40, h: 35 },
   { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 },
-  { name: "food3", img: "food3.png", points: 5, weight: 15, w: 100, h: 100 },
+  { name: "food3", img: "food3.png", points: 5, weight: 25, w: 100, h: 100 },
   { name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
 ];
 
 // Load all food images
 const foodImages = {};
+
 FOOD_TYPES.forEach(type => {
   const img = new Image();
   img.src = type.img;
   foodImages[type.name] = img;
 });
+
+FOOD_TYPES_L2.forEach(type => {
+  const img = new Image();
+  img.src = type.img;
+  foodImages[type.name] = img;
+});
+
 
 // Trash types with different point penalties
 const TRASH_TYPES = [
@@ -188,7 +209,15 @@ function weightedRandomSelect(types) {
 
 // Spawn food
 function spawnFood() {
-  const foodType = weightedRandomSelect(FOOD_TYPES);
+  let pool;
+
+  if (level === 1){
+        pool = FOOD_TYPES;
+  }
+  else{ 
+        pool = FOOD_TYPES_L2;
+  }
+  const foodType = weightedRandomSelect(pool);
   const xMin = water_X;
   const xMax = water_X + water_W - foodType.w;
   const newFood = {
@@ -249,9 +278,23 @@ bubbleImg.src = "bubble.png";
 
 // Draw function
 function draw() {
-  // Blue water background (full screen)
-  ctx.fillStyle = "lightblue";
-  ctx.fillRect(0, 0, W, H);
+  // requirement - change backgroupd color - attemtp to change to dark blue at 151 pts...
+
+  // if statement for the two levels of the game....
+  //  0 - 50 = level 1
+  //   51 -  = level 2
+
+   if (level === 2) {
+      ctx.fillStyle = "darkblue";
+      ctx.fillRect(0, 0, W, H);
+
+   }
+   else {
+
+      // Blue water background (full screen)
+       ctx.fillStyle = "lightblue";
+       ctx.fillRect(0, 0, W, H);
+   }
 
   // Bubbles
   const leftX = 50;
@@ -265,19 +308,19 @@ function draw() {
     const bubbleSizeLeft = 20 + Math.sin(y * 0.1 + bubbleOffset * 0.05) * 8;
     const bubbleSizeRight = 18 + Math.cos(y * 0.15 + bubbleOffset * 0.03) * 7;
     
-    if (bubbleImg.complete && bubbleImg.naturalWidth > 0) {
-      ctx.drawImage(bubbleImg, leftX - bubbleSizeLeft / 2, yy - bubbleSizeLeft / 2, bubbleSizeLeft, bubbleSizeLeft);
-      ctx.drawImage(bubbleImg, rightX - bubbleSizeRight / 2, yyRight - bubbleSizeRight / 2, bubbleSizeRight, bubbleSizeRight);
-    } else {
-      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-      ctx.beginPath();
-      ctx.arc(leftX, yy, bubbleSizeLeft / 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(rightX, yyRight, bubbleSizeRight / 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
+  //   if (bubbleImg.complete && bubbleImg.naturalWidth > 0) {
+  //     ctx.drawImage(bubbleImg, leftX - bubbleSizeLeft / 2, yy - bubbleSizeLeft / 2, bubbleSizeLeft, bubbleSizeLeft);
+  //     ctx.drawImage(bubbleImg, rightX - bubbleSizeRight / 2, yyRight - bubbleSizeRight / 2, bubbleSizeRight, bubbleSizeRight);
+  //   } else {
+  //     ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+  //     ctx.beginPath();
+  //     ctx.arc(leftX, yy, bubbleSizeLeft / 2, 0, Math.PI * 2);
+  //     ctx.fill();
+  //     ctx.beginPath();
+  //     ctx.arc(rightX, yyRight, bubbleSizeRight / 2, 0, Math.PI * 2);
+  //     ctx.fill();
+  //   }
+   }
 
   // Draw trash items
   trashItems.forEach(trash => {
@@ -313,22 +356,22 @@ function draw() {
     ctx.fillText(`+${food.points}`, food.x + food.w / 2, food.y + food.h / 2 + 6);
   });
 
-  // Draw glow effect around crab if active
-  if (glowTimer > 0) {
-    const glowIntensity = glowTimer / GLOW_DURATION;
-    const glowRadius = Math.max(crab.w, crab.h) * 0.7;
-    const centerX = crab.x + crab.w / 2;
-    const centerY = crab.y + crab.h / 2;
+  // // Draw glow effect around crab if active
+  // if (glowTimer > 0) {
+  //   const glowIntensity = glowTimer / GLOW_DURATION;
+  //   const glowRadius = Math.max(crab.w, crab.h) * 0.7;
+  //   const centerX = crab.x + crab.w / 2;
+  //   const centerY = crab.y + crab.h / 2;
     
-    const glowRGB = glowColor === "gold" ? "255, 215, 0" : "255, 0, 0";
-    const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
-    gradient.addColorStop(0, `rgba(${glowRGB}, ${0.6 * glowIntensity})`);
-    gradient.addColorStop(0.5, `rgba(${glowRGB}, ${0.3 * glowIntensity})`);
-    gradient.addColorStop(1, `rgba(${glowRGB}, 0)`);
+  //   const glowRGB = glowColor === "gold" ? "255, 215, 0" : "255, 0, 0";
+  //   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, glowRadius);
+  //   gradient.addColorStop(0, `rgba(${glowRGB}, ${0.6 * glowIntensity})`);
+  //   gradient.addColorStop(0.5, `rgba(${glowRGB}, ${0.3 * glowIntensity})`);
+  //   gradient.addColorStop(1, `rgba(${glowRGB}, 0)`);
     
-    ctx.fillStyle = gradient;
-    ctx.fillRect(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
-  }
+  //   ctx.fillStyle = gradient;
+  //   ctx.fillRect(centerX - glowRadius, centerY - glowRadius, glowRadius * 2, glowRadius * 2);
+  // }
 
   // Draw crab
   ctx.textAlign = "left";
@@ -545,6 +588,10 @@ function update(dt) {
       trashItems.splice(i, 1);
     }
   }
+  if (score > 10 && level === 1) {
+  level = 2;
+  console.log("LEVEL UP → Level 2 reached at score:", score);
+}
 }
 
 // Restart function
