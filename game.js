@@ -133,17 +133,17 @@ let deathRotation = 0;
 
 // Food types with different point values for level one and level two...
 const FOOD_TYPES_L1 = [
-  { name: "food1", img: "food1.png", points: 1, weight: 100, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 2, weight: 30, w: 40, h: 55 }
+  { name: "food1", img: "images/food1.png", points: 1, weight: 100, w: 40, h: 35 },
+  { name: "food2", img: "images/food2.png", points: 2, weight: 30, w: 40, h: 55 }
   //{ name: "food3", img: "food3.png", points: 5, weight: 15, w: 100, h: 100 },
   //{ name: "food4", img: "food4.png", points: 3, weight: 5, w: 70, h: 40 }
 ];
 
 const FOOD_TYPES_L2 = [
-  { name: "food1", img: "food1.png", points: 2, weight: 50, w: 40, h: 35 },
-  { name: "food2", img: "food2.png", points: 4, weight: 50, w: 40, h: 55 },
-  { name: "food3", img: "food3.png", points: 15, weight: 25, w: 100, h: 100 },
-  { name: "food4", img: "food4.png", points: 10, weight: 25, w: 70, h: 40 }
+  { name: "food1", img: "images/food1.png", points: 2, weight: 50, w: 40, h: 35 },
+  { name: "food2", img: "images/food2.png", points: 4, weight: 50, w: 40, h: 55 },
+  { name: "food3", img: "images/food3.png", points: 15, weight: 25, w: 100, h: 100 },
+  { name: "food4", img: "images/food4.png", points: 10, weight: 25, w: 70, h: 40 }
 ];
 
 // Load all food images
@@ -163,26 +163,26 @@ FOOD_TYPES_L2.forEach(type => {
 
 // ocean bottom
 const sand = new Image();
-sand.src = "lightsand.png";  
+sand.src = "images/lightsand.png";  
 
 const darkSand = new Image();
-darkSand.src = "darksand.png";  
+darkSand.src = "images/darksand.png";  
 
 // coral 
 const lightCoral = new Image();
-lightCoral.src = "lightcoral.png"; 
+lightCoral.src = "images/lightcoral.png"; 
 
 const darkCoral = new Image();
-darkCoral.src = "darkcoral.png"; 
+darkCoral.src = "images/darkcoral.png"; 
 
 
 
 // Trash types with different point penalties
 const TRASH_TYPES = [
-  { name: "trash1", img: "trash1.png", points: -1, weight: 50, w: 30, h: 40 },
-  { name: "trash2", img: "trash2.png", points: -2, weight: 30, w: 70, h: 70 },
-  { name: "trash3", img: "trash3.png", points: -3, weight: 15, w: 50, h: 60 },
-  { name: "trash4", img: "trash4.png", points: -5, weight: 5, w: 200, h: 200 }
+  { name: "trash1", img: "images/trash1.png", points: -1, weight: 50, w: 30, h: 40 },
+  { name: "trash2", img: "images/trash2.png", points: -2, weight: 30, w: 70, h: 70 },
+  { name: "trash3", img: "images/trash3.png", points: -3, weight: 15, w: 50, h: 60 },
+  { name: "trash4", img: "images/trash4.png", points: -5, weight: 5, w: 200, h: 200 }
 ];
 
 // Load all trash images
